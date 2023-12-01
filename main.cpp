@@ -315,6 +315,8 @@ public:
     virtual ~CMainWindow();
     std::vector<ITEM> m_items;
     BOOL m_bItemIsModified = FALSE;
+    CStringW m_strPath;
+    CStringW m_strTxtFile;
 
     VOID ResetSettings();
     BOOL LoadSettings();
@@ -419,15 +421,8 @@ public:
         return 0;
     }
 
-    CStringW m_strPath;
-
     BOOL doLoadTxtFile(LPCTSTR pszFile)
     {
-        CStringW strFile(pszFile);
-        INT ich = strFile.ReverseFind(L'\\');
-        CStringW strPath = strFile.Left(ich);
-        m_strPath = strPath;
-
         m_items.clear();
         if (FILE *fin = _tfopen(pszFile, "r"))
         {
@@ -461,6 +456,17 @@ public:
 
         m_bItemIsModified = FALSE;
         doUpdateListBox();
+
+        // Save file location info
+        CStringW strFile(pszFile);
+        INT ich = strFile.ReverseFind(L'\\');
+        CStringW strPath = strFile.Left(ich);
+        m_strPath = strPath;
+
+        WCHAR szText[MAX_PATH];
+        ::GetFullPathNameW(strFile, MAX_PATH, szText, NULL);
+        m_strTxtFile = szText;
+
         return 0;
     }
 
@@ -528,9 +534,13 @@ public:
             checkModified();
             doGoNextImage();
             break;
-        case psh5: // Save As
+        case psh5: // Save
             checkModified();
-            doSaveAs();
+            if (m_strTxtFile.IsEmpty())
+                doSaveAs();
+            else
+                doSave(m_strTxtFile);
+            break;
         case psh6: // Sort
             checkModified();
             std::sort(m_items.begin(), m_items.end(), [&](const ITEM& i1, const ITEM& i2){
@@ -808,6 +818,11 @@ public:
                     add_random(item.MouthX), add_random(item.MouthY));
             }
             fclose(fout);
+
+            CStringW strFile(pszFile);
+            INT ich = strFile.ReverseFind(L'\\');
+            CStringW strPath = strFile.Left(ich);
+            m_strPath = strPath;
             return TRUE;
         }
         return FALSE;
