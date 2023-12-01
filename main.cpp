@@ -563,6 +563,7 @@ public:
                 INT iItem = ListBox_GetCurSel(::GetDlgItem(m_hWnd, lst1));
                 if (iItem >= 0)
                 {
+                    checkModified();
                     OnListBoxSelect(iItem);
                 }
             }
