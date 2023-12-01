@@ -77,17 +77,19 @@ class CImageView
     SIZE m_viewSize = { 0, 0 };
     float m_zoom = 1.0;
 public:
-    POINTF m_Points[4] = {
+    POINTF m_Points[4] =
+    {
         { -1, -1 },
         { -1, -1 },
         { -1, -1 },
         { -1, -1 },
     };
-    COLORREF m_Colors[4] = {
-        RGB(0, 0, 0),
-        RGB(0, 0, 255),
+    COLORREF m_Colors[4] =
+    {
         RGB(255, 0, 0),
+        RGB(0, 255, 0),
         RGB(255, 0, 255),
+        RGB(0, 255, 255),
     };
     BOOL m_bMButton = FALSE;
     POINT m_ptDragging;
