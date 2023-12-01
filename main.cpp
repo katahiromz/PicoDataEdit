@@ -34,33 +34,38 @@ CPicoDataEditModule g_app;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+struct POINTD
+{
+    double x, y;
+};
+
 struct ITEM
 {
     std::string filename;
-    float LeftEyeX = -1;
-    float LeftEyeY = -1;
-    float RightEyeX = -1;
-    float RightEyeY = -1;
-    float NoseX = -1;
-    float NoseY = -1;
-    float MouthX = -1;
-    float MouthY = -1;
+    double LeftEyeX = -1;
+    double LeftEyeY = -1;
+    double RightEyeX = -1;
+    double RightEyeY = -1;
+    double NoseX = -1;
+    double NoseY = -1;
+    double MouthX = -1;
+    double MouthY = -1;
     BOOL bDeleted = FALSE;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-float GetDlgItemFloat(HWND hwnd, INT nItemID)
+double GetDlgItemDouble(HWND hwnd, INT nItemID)
 {
     char buf[128];
     GetDlgItemTextA(hwnd, nItemID, buf, sizeof(buf));
-    return (float)atof(buf);
+    return atof(buf);
 }
 
-BOOL SetDlgItemFloat(HWND hwnd, INT nItemID, float value)
+BOOL SetDlgItemDouble(HWND hwnd, INT nItemID, double value)
 {
     char buf[128];
-    StringCchPrintfA(buf, _countof(buf), "%f", value);
+    StringCchPrintfA(buf, _countof(buf), "%lf", value);
     return SetDlgItemTextA(hwnd, nItemID, buf);
 }
 
@@ -76,9 +81,9 @@ class CImageView
     HBITMAP m_hbm = NULL;
     SIZE m_realSize = { 0, 0 };
     SIZE m_viewSize = { 0, 0 };
-    float m_zoom = 1.0;
+    double m_zoom = 1.0;
 public:
-    POINTF m_Points[4] =
+    POINTD m_Points[4] =
     {
         { -1, -1 },
         { -1, -1 },
@@ -106,7 +111,7 @@ public:
         ::DeleteObject(m_hbm);
     }
 
-    POINTF ViewToReal(const POINTF& pt) const
+    POINTD ViewToReal(const POINTD& pt) const
     {
         if (m_hbm == NULL || m_viewSize.cx <= 0 || m_viewSize.cy <= 0)
             return { -1, -1 };
@@ -116,7 +121,7 @@ public:
         };
     }
 
-    POINTF RealToView(const POINTF& pt) const
+    POINTD RealToView(const POINTD& pt) const
     {
         if (m_hbm == NULL || m_realSize.cx <= 0 || m_realSize.cy <= 0)
             return { -1, -1 };
@@ -126,12 +131,12 @@ public:
         };
     }
 
-    void doDrawPoint(HDC hDC, POINTF& pt, INT i)
+    void doDrawPoint(HDC hDC, POINTD& pt, INT i)
     {
         if (pt.x < 0 || pt.y < 0)
             return;
 
-        POINTF ptView = RealToView(pt);
+        POINTD ptView = RealToView(pt);
         POINT pt2 = { LONG(ptView.x), LONG(ptView.y) };
         INT cxy = 5;
 
@@ -319,8 +324,9 @@ public:
         }
         m_viewSize = size;
 
-        m_bMButton = FALSE;
+        m_bLButton = m_bMButton = FALSE;
         m_ptScroll = { 0, 0 };
+        m_zoom = 1;
 
         Invalidate();
     }
@@ -357,7 +363,7 @@ public:
 
     LRESULT OnImageMouseMove(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
-        POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
+        POINTD pt = { (double)GET_X_LPARAM(lParam), (double)GET_Y_LPARAM(lParam) };
         pt = m_imageView.ViewToReal(pt);
         if (m_imageView.m_bLButton)
         {
@@ -372,7 +378,7 @@ public:
         return 0;
     }
 
-    void setPoint(POINTF pt, BOOL bSetRadio = TRUE)
+    void setPoint(POINTD pt, BOOL bSetRadio = TRUE)
     {
         if (IsDlgButtonChecked(rad1) == BST_CHECKED)
             setPoint(0, pt, bSetRadio);
@@ -384,7 +390,7 @@ public:
             setPoint(3, pt, bSetRadio);
     }
 
-    void setPoint(INT i, POINTF pt, BOOL bSetRadio = TRUE)
+    void setPoint(INT i, POINTD pt, BOOL bSetRadio = TRUE)
     {
         switch (i)
         {
@@ -421,7 +427,7 @@ public:
 
     LRESULT OnImageLButtonDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
-        POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
+        POINTD pt = { (double)GET_X_LPARAM(lParam), (double)GET_Y_LPARAM(lParam) };
         pt = m_imageView.ViewToReal(pt);
         setPoint(pt, FALSE);
         return 0;
@@ -429,7 +435,7 @@ public:
 
     LRESULT OnImageLButtonUp(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
-        POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
+        POINTD pt = { (double)GET_X_LPARAM(lParam), (double)GET_Y_LPARAM(lParam) };
         pt = m_imageView.ViewToReal(pt);
         setPoint(pt, TRUE);
         return 0;
@@ -475,23 +481,23 @@ public:
         m_items.clear();
         if (FILE *fin = _tfopen(pszFile, "r"))
         {
-            char buf[256], filename[MAX_PATH];
-            while (fgets(buf, 256, fin))
+            char buf[1024], filename[MAX_PATH];
+            while (fgets(buf, _countof(buf), fin))
             {
                 StrTrimA(buf, " \t\r\n");
                 ITEM item;
-                if (sscanf(buf, "%s %f %f %f %f %f %f %f %f",
+                if (sscanf(buf, "%s %lf %lf %lf %lf %lf %lf %lf %lf",
                            filename,
                            &item.LeftEyeX, &item.LeftEyeY,
                            &item.RightEyeX, &item.RightEyeY,
                            &item.NoseX, &item.NoseY,
                            &item.MouthX, &item.MouthY))
                 {
-                    buf[sizeof(buf) - 1];
+                    buf[sizeof(buf) - 1] = 0;
                     item.filename = filename;
                     if (item.filename.size() &&
                         item.LeftEyeX > 0 && item.LeftEyeY > 0 &&
-                        item.RightEyeX > 0 &&  item.RightEyeY > 0 &&
+                        item.RightEyeX > 0 && item.RightEyeY > 0 &&
                         item.NoseX > 0 && item.NoseY > 0 &&
                         item.MouthX > 0 && item.MouthY > 0)
                     {
@@ -546,6 +552,8 @@ public:
 
     LRESULT OnCommand(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled)
     {
+        static INT s_iItem = -1;
+
         switch (LOWORD(wParam))
         {
         case IDOK:
@@ -561,9 +569,10 @@ public:
             if (HIWORD(wParam) == LBN_SELCHANGE)
             {
                 INT iItem = ListBox_GetCurSel(::GetDlgItem(m_hWnd, lst1));
-                if (iItem >= 0)
+                if (iItem >= 0 && s_iItem != iItem)
                 {
-                    checkModified();
+                    checkModified(s_iItem);
+                    s_iItem = iItem;
                     OnListBoxSelect(iItem);
                 }
             }
@@ -629,16 +638,25 @@ public:
             }
             break;
         }
+
+        {
+            INT iItem = ListBox_GetCurSel(::GetDlgItem(m_hWnd, lst1));
+            s_iItem = iItem;
+        }
+
         return 0;
     }
 
-    void checkModified()
+    void checkModified(INT iItem = -1)
     {
         if (!m_bItemIsModified)
             return;
 
         HWND hListBox = ::GetDlgItem(m_hWnd, lst1);
-        INT iItem = ListBox_GetCurSel(hListBox);
+
+        if (iItem == -1)
+            iItem = ListBox_GetCurSel(hListBox);
+
         INT cItems = ListBox_GetCount(hListBox);
         if (iItem < 0 || iItem >= cItems)
         {
@@ -646,14 +664,14 @@ public:
             return;
         }
 
-        m_items[iItem].LeftEyeX = ::GetDlgItemFloat(m_hWnd, edt1);
-        m_items[iItem].LeftEyeY = ::GetDlgItemFloat(m_hWnd, edt2);
-        m_items[iItem].RightEyeX = ::GetDlgItemFloat(m_hWnd, edt3);
-        m_items[iItem].RightEyeY = ::GetDlgItemFloat(m_hWnd, edt4);
-        m_items[iItem].NoseX = ::GetDlgItemFloat(m_hWnd, edt5);
-        m_items[iItem].NoseY = ::GetDlgItemFloat(m_hWnd, edt6);
-        m_items[iItem].MouthX = ::GetDlgItemFloat(m_hWnd, edt7);
-        m_items[iItem].MouthY = ::GetDlgItemFloat(m_hWnd, edt8);
+        m_items[iItem].LeftEyeX = ::GetDlgItemDouble(m_hWnd, edt1);
+        m_items[iItem].LeftEyeY = ::GetDlgItemDouble(m_hWnd, edt2);
+        m_items[iItem].RightEyeX = ::GetDlgItemDouble(m_hWnd, edt3);
+        m_items[iItem].RightEyeY = ::GetDlgItemDouble(m_hWnd, edt4);
+        m_items[iItem].NoseX = ::GetDlgItemDouble(m_hWnd, edt5);
+        m_items[iItem].NoseY = ::GetDlgItemDouble(m_hWnd, edt6);
+        m_items[iItem].MouthX = ::GetDlgItemDouble(m_hWnd, edt7);
+        m_items[iItem].MouthY = ::GetDlgItemDouble(m_hWnd, edt8);
         m_bItemIsModified = FALSE;
     }
 
@@ -678,25 +696,6 @@ public:
         str += std::to_string(iItem);
         ::SetDlgItemTextA(m_hWnd, stc10, str.c_str());
 
-        INT i = 0;
-        auto& item = m_items[iItem];
-        m_imageView.m_Points[0].x = item.LeftEyeX;
-        ::SetDlgItemInt(m_hWnd, edt1, (LONG)item.LeftEyeX, TRUE);
-        m_imageView.m_Points[0].y = item.LeftEyeY;
-        ::SetDlgItemInt(m_hWnd, edt2, (LONG)item.LeftEyeY, TRUE);
-        m_imageView.m_Points[1].x = item.RightEyeX;
-        ::SetDlgItemInt(m_hWnd, edt3, (LONG)item.RightEyeX, TRUE);
-        m_imageView.m_Points[1].y = item.RightEyeY;
-        ::SetDlgItemInt(m_hWnd, edt4, (LONG)item.RightEyeY, TRUE);
-        m_imageView.m_Points[2].x = item.NoseX;
-        ::SetDlgItemInt(m_hWnd, edt5, (LONG)item.NoseX, TRUE);
-        m_imageView.m_Points[2].y = item.NoseY;
-        ::SetDlgItemInt(m_hWnd, edt6, (LONG)item.NoseY, TRUE);
-        m_imageView.m_Points[3].x = item.MouthX;
-        ::SetDlgItemInt(m_hWnd, edt7, (LONG)item.MouthX, TRUE);
-        m_imageView.m_Points[3].y = item.MouthY;
-        ::SetDlgItemInt(m_hWnd, edt8, (LONG)item.MouthY, TRUE);
-
         CString filename(m_items[iItem].filename.c_str());
         CImage image;
         if (m_strPath.IsEmpty())
@@ -710,8 +709,29 @@ public:
             str += CString(filename);
             image.Load(str);
         }
+
         HBITMAP hbm = image.Detach();
         m_imageView.doSetBitmap(hbm);
+
+        auto& item = m_items[iItem];
+        m_imageView.m_Points[0] = { item.LeftEyeX, item.LeftEyeY };
+        m_imageView.m_Points[1] = { item.RightEyeX, item.RightEyeY };
+        m_imageView.m_Points[2] = { item.NoseX, item.NoseY };
+        m_imageView.m_Points[3] = { item.MouthX, item.MouthY };
+
+        ::SetDlgItemDouble(m_hWnd, edt1, item.LeftEyeX);
+        ::SetDlgItemDouble(m_hWnd, edt2, item.LeftEyeY);
+
+        ::SetDlgItemDouble(m_hWnd, edt3, item.RightEyeX);
+        ::SetDlgItemDouble(m_hWnd, edt4, item.RightEyeY);
+
+        ::SetDlgItemDouble(m_hWnd, edt5, item.NoseX);
+        ::SetDlgItemDouble(m_hWnd, edt6, item.NoseY);
+
+        ::SetDlgItemDouble(m_hWnd, edt7, item.MouthX);
+        ::SetDlgItemDouble(m_hWnd, edt8, item.MouthY);
+
+        m_imageView.Invalidate(TRUE);
     }
 
     void doGoPrevImage()
@@ -847,10 +867,10 @@ public:
         }
     }
 
-    float add_random(float value)
+    double add_random(double value)
     {
-        float floor_value = (float)floor(value);
-        return float(floor_value + (rand() / (double)(RAND_MAX - 1)));
+        double floor_value = floor(value);
+        return double(floor_value + (rand() / (double)(RAND_MAX - 1)));
     }
 
     BOOL doSave(LPCWSTR pszFile)
