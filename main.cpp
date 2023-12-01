@@ -325,8 +325,6 @@ public:
         m_viewSize = size;
 
         m_bLButton = m_bMButton = FALSE;
-        m_ptScroll = { 0, 0 };
-        m_zoom = 1;
 
         Invalidate();
     }
