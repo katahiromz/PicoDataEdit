@@ -58,7 +58,7 @@ FONT 9, "MS Shell Dlg"
     PUSHBUTTON "< Previous &Face", psh2, 95, 295, 85, 25
     PUSHBUTTON "&Next Face >", psh3, 215, 295, 85, 25
     PUSHBUTTON "Next &Image >", psh4, 305, 295, 85, 25
-    PUSHBUTTON "&Save As...", psh5, 5, 330, 85, 25
+    PUSHBUTTON "&Save!", psh5, 5, 330, 85, 25
     CTEXT "", stc10, 185, 300, 25, 20, SS_CENTERIMAGE | NOT WS_GROUP
     AUTORADIOBUTTON "Mouse Input", rad1, 350, 215, 60, 15, WS_GROUP | WS_TABSTOP
     AUTORADIOBUTTON "Mouse Input", rad2, 350, 235, 60, 15, WS_TABSTOP
