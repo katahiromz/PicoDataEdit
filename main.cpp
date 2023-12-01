@@ -147,16 +147,16 @@ public:
         case 0:
             psz = "L.Eye";
             dx = -20;
-            dy = -10;
+            dy = -15;
             break;
         case 1:
             psz = "R.Eye";
             dx = +20;
-            dy = -10;
+            dy = -15;
             break;
         case 2:
             psz = "Nose";
-            dx = +20;
+            dx = +30;
             break;
         case 3:
             psz = "Mouth";
