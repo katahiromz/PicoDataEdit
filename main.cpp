@@ -67,7 +67,8 @@ BOOL SetDlgItemFloat(HWND hwnd, INT nItemID, float value)
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define MYWM_LBUTTONDOWN (WM_USER + 100)
-#define MYWM_MOUSEMOVE (WM_USER + 101)
+#define MYWM_LBUTTONUP (WM_USER + 101)
+#define MYWM_MOUSEMOVE (WM_USER + 102)
 
 class CImageView 
     : public CWindowImpl<CImageView>
@@ -91,6 +92,7 @@ public:
         RGB(255, 0, 255),
         RGB(0, 255, 255),
     };
+    BOOL m_bLButton = FALSE;
     BOOL m_bMButton = FALSE;
     POINT m_ptDragging;
     POINT m_ptScroll = { 0, 0 };
@@ -173,6 +175,7 @@ public:
         MESSAGE_HANDLER(WM_PAINT, OnPaint)
         MESSAGE_HANDLER(WM_LBUTTONDOWN, OnLButtonDown)
         MESSAGE_HANDLER(WM_MBUTTONDOWN, OnMButtonDown)
+        MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonUp)
         MESSAGE_HANDLER(WM_MBUTTONUP, OnMButtonUp)
         MESSAGE_HANDLER(WM_MOUSEMOVE, OnMouseMove)
         MESSAGE_HANDLER(WM_MOUSEWHEEL, OnMouseWheel)
@@ -190,6 +193,19 @@ public:
     LRESULT OnMButtonUp(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
         m_bMButton = FALSE;
+        ReleaseCapture();
+        return 0;
+    }
+
+    LRESULT OnLButtonUp(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+    {
+        INT x = GET_X_LPARAM(lParam), y = GET_Y_LPARAM(lParam);
+        POINT pt = { x, y };
+        BOOL bMoved = !(m_ptDragging.x == pt.x && m_ptDragging.y == pt.y);
+        HWND hwndParent = ::GetParent(m_hWnd);
+        ::SendMessage(hwndParent, MYWM_LBUTTONUP, bMoved, lParam);
+
+        m_bLButton = FALSE;
         ReleaseCapture();
         return 0;
     }
@@ -217,8 +233,11 @@ public:
     LRESULT OnLButtonDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
         INT x = GET_X_LPARAM(lParam), y = GET_Y_LPARAM(lParam);
+        m_bLButton = TRUE;
+        POINT pt = { x, y };
+        m_ptDragging = pt;
         HWND hwndParent = ::GetParent(m_hWnd);
-        ::PostMessage(hwndParent, MYWM_LBUTTONDOWN, 0, lParam);
+        ::SendMessage(hwndParent, MYWM_LBUTTONDOWN, 0, lParam);
         return 0;
     }
 
@@ -237,7 +256,7 @@ public:
         }
 
         HWND hwndParent = ::GetParent(m_hWnd);
-        ::PostMessage(hwndParent, MYWM_MOUSEMOVE, 0, lParam);
+        ::SendMessage(hwndParent, MYWM_MOUSEMOVE, 0, lParam);
         return 0;
     }
 
@@ -331,6 +350,7 @@ public:
         MESSAGE_HANDLER(WM_DROPFILES, OnDropFiles)
         MESSAGE_HANDLER(MYWM_MOUSEMOVE, OnImageMouseMove)
         MESSAGE_HANDLER(MYWM_LBUTTONDOWN, OnImageLButtonDown)
+        MESSAGE_HANDLER(MYWM_LBUTTONUP, OnImageLButtonUp)
     END_MSG_MAP()
 
     CImageView m_imageView;
@@ -339,52 +359,79 @@ public:
     {
         POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
         pt = m_imageView.ViewToReal(pt);
-        WCHAR szText[128];
-        StringCchPrintfW(szText, _countof(szText), L"%ld, %ld", (LONG)pt.x, (LONG)pt.y);
-        ::SetDlgItemTextW(m_hWnd, stc11, szText);
+        if (m_imageView.m_bLButton)
+        {
+            setPoint(pt, FALSE);
+        }
+        else
+        {
+            WCHAR szText[128];
+            StringCchPrintfW(szText, _countof(szText), L"%ld, %ld", (LONG)pt.x, (LONG)pt.y);
+            ::SetDlgItemTextW(m_hWnd, stc11, szText);
+        }
         return 0;
+    }
+
+    void setPoint(POINTF pt, BOOL bSetRadio = TRUE)
+    {
+        if (IsDlgButtonChecked(rad1) == BST_CHECKED)
+            setPoint(0, pt, bSetRadio);
+        else if (IsDlgButtonChecked(rad2) == BST_CHECKED)
+            setPoint(1, pt, bSetRadio);
+        else if (IsDlgButtonChecked(rad3) == BST_CHECKED)
+            setPoint(2, pt, bSetRadio);
+        else if (IsDlgButtonChecked(rad4) == BST_CHECKED)
+            setPoint(3, pt, bSetRadio);
+    }
+
+    void setPoint(INT i, POINTF pt, BOOL bSetRadio = TRUE)
+    {
+        switch (i)
+        {
+        case 0:
+            SetDlgItemInt(edt1, (LONG)pt.x, TRUE);
+            SetDlgItemInt(edt2, (LONG)pt.y, TRUE);
+            if (bSetRadio)
+                CheckRadioButton(rad1, rad4, rad2);
+            break;
+        case 1:
+            SetDlgItemInt(edt3, (LONG)pt.x, TRUE);
+            SetDlgItemInt(edt4, (LONG)pt.y, TRUE);
+            if (bSetRadio)
+                CheckRadioButton(rad1, rad4, rad3);
+            break;
+        case 2:
+            SetDlgItemInt(edt5, (LONG)pt.x, TRUE);
+            SetDlgItemInt(edt6, (LONG)pt.y, TRUE);
+            if (bSetRadio)
+                CheckRadioButton(rad1, rad4, rad4);
+            break;
+        case 3:
+            SetDlgItemInt(edt7, (LONG)pt.x, TRUE);
+            SetDlgItemInt(edt8, (LONG)pt.y, TRUE);
+            if (bSetRadio)
+                CheckRadioButton(rad1, rad4, rad1);
+            break;
+        }
+
+        m_imageView.m_Points[i] = pt;
+        m_imageView.Invalidate();
+        m_bItemIsModified = TRUE;
     }
 
     LRESULT OnImageLButtonDown(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
     {
         POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
         pt = m_imageView.ViewToReal(pt);
-        if (IsDlgButtonChecked(rad1) == BST_CHECKED)
-        {
-            SetDlgItemInt(edt1, (LONG)pt.x, TRUE);
-            SetDlgItemInt(edt2, (LONG)pt.y, TRUE);
-            CheckRadioButton(rad1, rad4, rad2);
-            m_imageView.m_Points[0] = pt;
-            m_imageView.Invalidate();
-            m_bItemIsModified = TRUE;
-        }
-        else if (IsDlgButtonChecked(rad2) == BST_CHECKED)
-        {
-            SetDlgItemInt(edt3, (LONG)pt.x, TRUE);
-            SetDlgItemInt(edt4, (LONG)pt.y, TRUE);
-            CheckRadioButton(rad1, rad4, rad3);
-            m_imageView.m_Points[1] = pt;
-            m_imageView.Invalidate();
-            m_bItemIsModified = TRUE;
-        }
-        else if (IsDlgButtonChecked(rad3) == BST_CHECKED)
-        {
-            SetDlgItemInt(edt5, (LONG)pt.x, TRUE);
-            SetDlgItemInt(edt6, (LONG)pt.y, TRUE);
-            CheckRadioButton(rad1, rad4, rad4);
-            m_imageView.m_Points[2] = pt;
-            m_imageView.Invalidate();
-            m_bItemIsModified = TRUE;
-        }
-        else if (IsDlgButtonChecked(rad4) == BST_CHECKED)
-        {
-            SetDlgItemInt(edt7, (LONG)pt.x, TRUE);
-            SetDlgItemInt(edt8, (LONG)pt.y, TRUE);
-            CheckRadioButton(rad1, rad4, rad1);
-            m_imageView.m_Points[3] = pt;
-            m_imageView.Invalidate();
-            m_bItemIsModified = TRUE;
-        }
+        setPoint(pt, FALSE);
+        return 0;
+    }
+
+    LRESULT OnImageLButtonUp(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+    {
+        POINTF pt = { (float)GET_X_LPARAM(lParam), (float)GET_Y_LPARAM(lParam) };
+        pt = m_imageView.ViewToReal(pt);
+        setPoint(pt, TRUE);
         return 0;
     }
 
