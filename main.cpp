@@ -883,7 +883,7 @@ public:
                     continue;
                 }
                 fprintf(fout,
-                    "%s %e %e %e %e %e %e %e %e \n",
+                    "%s %12f %12f %12f %12f %12f %12f %12f %12f \n",
                     item.filename.c_str(),
                     add_random(item.LeftEyeX), add_random(item.LeftEyeY),
                     add_random(item.RightEyeX), add_random(item.RightEyeY),
