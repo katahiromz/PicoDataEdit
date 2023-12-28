@@ -877,8 +877,8 @@ public:
         {
             for (auto& item: m_items)
             {
-                if (item.LeftEyeX < 0 && item.LeftEyeY < 0 &&
-                    item.RightEyeX < 0 && item.RightEyeX < 0)
+                if (item.LeftEyeX < 0 || item.LeftEyeY < 0 ||
+                    item.RightEyeX < 0 || item.RightEyeX < 0)
                 {
                     continue;
                 }
